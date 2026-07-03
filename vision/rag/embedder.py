@@ -50,7 +50,7 @@ class Embedder:
             import httpx
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.post(
-                    "http://localhost:11434/api/embeddings",
+                    "http://127.0.0.1:11434/api/embeddings",
                     json={"model": self.model, "prompt": text},
                 )
                 resp.raise_for_status()

@@ -40,6 +40,20 @@ class LLMClient:
         if self._warmed_up or self.config.provider != "ollama":
             return
         try:
+            # Quick check if Ollama is reachable
+            check_session = self._make_session()
+            try:
+                check_resp = await asyncio.to_thread(
+                    check_session.get,
+                    f"{self.config.base_url}/api/tags",
+                    timeout=3,
+                )
+                if check_resp.status_code != 200:
+                    logger.warning("Ollama not reachable at %s — check if Ollama is running", self.config.base_url)
+                    return
+            finally:
+                check_session.close()
+
             logger.info("Warming up Ollama model...")
             payload = {
                 "model": self.config.model,
@@ -92,6 +106,8 @@ class LLMClient:
             except Exception as e:
                 logger.error(f"LLM chat error: {e}")
                 if attempt == 2:
+                    if "Connection" in str(e) or "refused" in str(e).lower():
+                        return f"Ошибка: Ollama не доступен на {self.config.base_url}. Запустите Ollama."
                     return f"Error: {e}"
                 await asyncio.sleep(2)
             finally:

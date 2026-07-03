@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 class LLMConfig:
     provider: str = "ollama"
     model: str = "qwen2.5:14b"
-    base_url: str = "http://localhost:11434"
+    base_url: str = "http://127.0.0.1:11434"
     api_key: str = ""
     temperature: float = 0.7
     max_tokens: int = 4096
