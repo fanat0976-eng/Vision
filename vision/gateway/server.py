@@ -4,6 +4,7 @@ import json
 import asyncio
 import logging
 from pathlib import Path
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -20,7 +21,31 @@ def create_app(config: Config | None = None) -> FastAPI:
     if config is None:
         config = Config.load()
 
-    app = FastAPI(title="Vision Gateway", version="0.1.0")
+    _state = {"db": None, "config": config, "telegram": None}
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        db = Database(config.db_path)
+        await db.connect()
+        _state["db"] = db
+        logger.info("Vision gateway started")
+
+        if config.gateway.auth_token:
+            from vision.gateway.platforms.telegram import TelegramPlatform
+            agent_factory = lambda: Agent(config, db)
+            tg = TelegramPlatform(config.gateway.auth_token, agent_factory)
+            _state["telegram"] = tg
+            asyncio.create_task(tg.start())
+            logger.info("Telegram bot started")
+
+        yield
+
+        if _state.get("telegram"):
+            await _state["telegram"].stop()
+        if _state["db"]:
+            await _state["db"].close()
+
+    app = FastAPI(title="Vision Gateway", version="0.1.0", lifespan=lifespan)
 
     # CORS: whitelist local origins only
     allowed_origins = [
@@ -37,29 +62,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
-    _state = {"db": None, "config": config}
-
-    @app.on_event("startup")
-    async def startup():
-        db = Database(config.db_path)
-        await db.connect()
-        _state["db"] = db
-        logger.info("Vision gateway started")
-
-        if config.gateway.auth_token:
-            from vision.gateway.platforms.telegram import TelegramPlatform
-            agent_factory = lambda: Agent(config, db)
-            tg = TelegramPlatform(config.gateway.auth_token, agent_factory)
-            _state["telegram"] = tg
-            asyncio.create_task(tg.start())
-            logger.info("Telegram bot started")
-
-    @app.on_event("shutdown")
-    async def shutdown():
-        if _state.get("telegram"):
-            await _state["telegram"].stop()
-        if _state["db"]:
-            await _state["db"].close()
+    _state = {"db": None, "config": config, "telegram": None}
 
     @app.get("/api/health")
     async def health():

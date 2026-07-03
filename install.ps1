@@ -23,7 +23,14 @@ function Test-Command($cmd) {
     }
 }
 
-function Install-WingetPackage($id, $name) {
+function Install-WingetPackage($id, $name, $downloadUrl) {
+    # Check if winget is available
+    if (-not (Test-Command "winget")) {
+        Write-Host "[-] winget not found. Manual install required:" -ForegroundColor Yellow
+        Write-Host "    Download: $downloadUrl" -ForegroundColor DarkGray
+        Write-Host "    After install, restart this script." -ForegroundColor DarkGray
+        return $false
+    }
     Write-Host "[*] Installing $name via winget..." -ForegroundColor Yellow
     try {
         winget install --id $id --accept-package-agreements --accept-source-agreements --silent
@@ -34,6 +41,7 @@ function Install-WingetPackage($id, $name) {
     } catch {
         Write-Host "[-] winget failed for $name" -ForegroundColor Red
     }
+    Write-Host "    Manual install: $downloadUrl" -ForegroundColor DarkGray
     return $false
 }
 
@@ -61,7 +69,7 @@ if (Test-Command "python") {
 
 if (-not $pythonOk) {
     Write-Host "[*] Installing Python 3.12..." -ForegroundColor Yellow
-    Install-WingetPackage "Python.Python.3.12" "Python 3.12"
+    Install-WingetPackage "Python.Python.3.12" "Python 3.12" "https://www.python.org/downloads/"
     Refresh-Path
 
     # Verify
@@ -87,7 +95,7 @@ if (Test-Command "git") {
     Write-Host "[+] $gitVer" -ForegroundColor Green
 } else {
     Write-Host "[*] Installing Git..." -ForegroundColor Yellow
-    Install-WingetPackage "Git.Git" "Git"
+    Install-WingetPackage "Git.Git" "Git" "https://git-scm.com/download/win"
     Refresh-Path
 }
 
