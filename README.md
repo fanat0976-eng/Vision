@@ -155,3 +155,59 @@ Vision/
 ## License
 
 MIT
+
+## Troubleshooting
+
+### Ollama не отвечает / 503 ошибка
+```
+Connection refused / 503 Service Unavailable
+```
+**Решение:**
+```bash
+# Проверить Ollama
+ollama list
+
+# Запустить
+ollama serve
+
+# Скачать модель
+ollama pull qwen2.5:14b
+```
+Важно: URL должен быть `127.0.0.1`, НЕ `localhost` (localhost перехватывается прокси).
+
+### Python не найден
+```
+'python' is not recognized
+```
+**Решение:** Установить Python 3.11+ с [python.org](https://python.org/downloads/), поставить галочку "Add Python to PATH".
+
+### Telegram bot не запускается
+```
+telegram bot token not configured
+```
+**Решение:** Получите токен у [@BotFather](https://t.me/BotFather), добавьте в `config.json`:
+```json
+{ "gateway": { "auth_token": "YOUR_TOKEN" } }
+```
+
+### Gateway не стартует
+```
+Address already in use: 8080
+```
+**Решение:**
+```bash
+netstat -ano | findstr :8080
+taskkill /PID <PID> /F
+```
+
+### Другой порт
+```bash
+# Изменить порт в config.json
+{ "gateway": { "port": 9090 } }
+```
+
+### Нет интернета — не работает
+**Решение:** Vision работает полностью офлайн через Ollama. Проверьте:
+1. Ollama запущен: `ollama list`
+2. URL: `127.0.0.1:11434` (не localhost)
+3. Модель скачана: `ollama pull qwen2.5:14b`
